@@ -1,0 +1,92 @@
+{
+  "app": {
+    "title": "AXIS ERP | Terminal",
+    "description": "Operaciones Soberanas"
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "delete": "Eliminar",
+    "edit": "Editar",
+    "loading": "Cargando...",
+    "search": "Buscar...",
+    "back": "Volver",
+    "confirm": "Confirmar",
+    "close": "Cerrar",
+    "actions": "Acciones"
+  },
+  "currency": {
+    "pyg": "Guarani",
+    "usd": "Dólar Americano",
+    "brl": "Real Brasileño",
+    "symbol_pyg": "Gs",
+    "symbol_usd": "$",
+    "symbol_brl": "R$"
+  },
+  "exchangeRates": {
+    "title": "Tasas de Cambio",
+    "description": "Gestione las tasas de cambio PYG, USD y BRL",
+    "fetchOfficial": "Obtener Tasas Oficiales",
+    "fetching": "Obteniendo tasas...",
+    "ratePYGtoUSD": "PYG → USD",
+    "ratePYGtoBRL": "PYG → BRL",
+    "lastUpdate": "Última actualización",
+    "source": "Fuente",
+    "isManual": "Manual",
+    "table": {
+      "date": "Fecha",
+      "rateUSD": "Tasa USD",
+      "rateBRL": "Tasa BRL",
+      "source": "Fuente",
+      "actions": "Acciones"
+    },
+    "noRates": "No se encontraron tasas de cambio",
+    "errors": {
+      "fetchFailed": "Fallo al obtener tasas oficiales",
+      "invalidRate": "Tasa de cambio inválida",
+      "saveFailed": "Fallo al guardar tasa de cambio"
+    },
+    "success": {
+      "saved": "Tasa de cambio guardada exitosamente",
+      "fetched": "Tasas oficiales cargadas exitosamente"
+    }
+  },
+  "sifen": {
+    "status": {
+      "PENDING": "Pendiente",
+      "APPROVED": "Aprobado",
+      "REJECTED": "Rechazado",
+      "CANCELLED": "Cancelado"
+    },
+    "errors": {
+      "connectionTimeout": "Tiempo límite de conexión con SIFEN excedido",
+      "networkError": "Error de red al comunicarse con SIFEN",
+      "invalidCertificate": "Certificado digital inválido o expirado",
+      "signingFailed": "Fallo al firmar documento XML",
+      "xmlGenerationFailed": "Fallo al generar XML del documento",
+      "rejectedBySifen": "Documento rechazado por SIFEN",
+      "cdcNotFound": "Código de control (CDC) no encontrado",
+      "invoiceNotFound": "Factura no encontrada",
+      "retryExhausted": "Todas las intentos de envío fueron agotadas",
+      "apiError": "Error en la API de SIFEN",
+      "invalidResponse": "Respuesta inválida de SIFEN"
+    },
+    "messages": {
+      "pendingRetry": "Programado para reintento",
+      "savedLocally": "Documento guardado localmente para reintento",
+      "approved": "Documento aprobado por SIFEN",
+      "submitted": "Documento enviado a SIFEN",
+      "silentMode": "Modo silencioso activado - operación continúa normalmente"
+    }
+  },
+  "priceTag": {
+    "equivalent": "equivale a",
+    "viewMargin": "Ver margen de ganancia"
+  },
+  "dashboard": {
+    "welcome": "Bienvenido a AXIS ERP",
+    "quickActions": "Acciones Rápidas",
+    "recentActivity": "Actividad Reciente",
+    "financialSummary": "Resumen Financiero"
+  }
+}

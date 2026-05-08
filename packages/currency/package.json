@@ -1,0 +1,19 @@
+{
+  "name": "@axis/currency",
+  "version": "0.1.0",
+  "description": "AXIS ERP - High-precision currency conversion engine with PYG anchor",
+  "main": "lib/engine.js",
+  "types": "lib/engine.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "decimal.js": "^10.4.3",
+    "@prisma/client": "^6.4.1"
+  },
+  "devDependencies": {
+    "typescript": "^5",
+    "@types/node": "^20"
+  }
+}
