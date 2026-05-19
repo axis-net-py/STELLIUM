@@ -66,7 +66,7 @@ export async function adjustStock(
   })
   if (!product) throw new Error('Produto não encontrado')
 
-  if (type === 'SAIDA' && product.currentStock < quantity) {
+  if (type === 'SAIDA' && Number(product.currentStock) < quantity) {
     throw new Error(`Estoque insuficiente para o produto: ${product.namePt}. Disponível: ${product.currentStock}`)
   }
 
