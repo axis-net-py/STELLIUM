@@ -109,7 +109,7 @@ export async function postInvoiceToLedger(invoiceId: string, tx?: any) {
   });
 
   // 2. Define Journal Lines (Simplified logic for common ERP flow)
-  const lines = [];
+  const lines: Prisma.JournalLineCreateManyInput[] = [];
 
   if (invoice.type === "SALES") {
     // SALES FLOW
