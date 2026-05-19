@@ -5,6 +5,8 @@ import prisma from '@/lib/prisma'
 import { revalidatePath } from 'next/cache'
 import { Prisma } from '@prisma/client'
 import type { CommercialInvoice, InvoiceItem } from '@prisma/client'
+import { postInvoiceToLedger } from './accounting'
+import { submitInvoiceToSifen } from './sifen'
 
 export type InvoiceFormData = {
   type: 'PURCHASE' | 'SALES'
@@ -18,6 +20,7 @@ export type InvoiceFormData = {
     productId: string
     quantity: number
     unitPrice: number
+    taxType?: 'IVA_10' | 'IVA_5' | 'EXENTO'
     cost?: number
   }[]
 }
@@ -26,6 +29,22 @@ export type InvoiceWithDetails = CommercialInvoice & {
   customer: { id: string; name: string; document?: string | null }
   items: (InvoiceItem & { product: { id: string; sku: string; namePt: string; nameEs: string } })[]
   movements: { id: string; type: string; quantity: number; product: { namePt: string } }[]
+}
+
+// Helper para cálculo de impostos paraguaios
+function calculateTax(totalPrice: Prisma.Decimal, taxType: 'IVA_10' | 'IVA_5' | 'EXENTO') {
+  let taxAmount = new Prisma.Decimal(0)
+  let taxBase = totalPrice
+
+  if (taxType === 'IVA_10') {
+    taxAmount = totalPrice.dividedBy(11).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+  } else if (taxType === 'IVA_5') {
+    taxAmount = totalPrice.dividedBy(21).toDecimalPlaces(0, Prisma.Decimal.ROUND_HALF_UP)
+  } else {
+    taxAmount = new Prisma.Decimal(0)
+  }
+
+  return { taxAmount, taxBase }
 }
 
 // Listar faturas do tenant
@@ -85,12 +104,15 @@ export async function createPurchaseInvoice(data: InvoiceFormData) {
     })
 
     let totalAmount = new Prisma.Decimal(0)
+    let totalIva10 = new Prisma.Decimal(0)
+    let totalIva5 = new Prisma.Decimal(0)
+    let totalExento = new Prisma.Decimal(0)
 
     // 2. Criar itens e movimentações de estoque (ENTRADA)
     for (const item of data.items) {
       const product = await tx.product.findFirst({
         where: { id: item.productId, tenantId },
-        select: { id: true, currentStock: true, namePt: true },
+        select: { id: true, currentStock: true, namePt: true, taxType: true },
       })
       if (!product) throw new Error(`Produto ${item.productId} não encontrado`)
 
@@ -98,6 +120,9 @@ export async function createPurchaseInvoice(data: InvoiceFormData) {
       const unitPrice = new Prisma.Decimal(item.unitPrice)
       const totalPrice = unitPrice.mul(quantity)
       const cost = new Prisma.Decimal(item.cost ?? item.unitPrice)
+      const taxType = item.taxType ?? product.taxType
+
+      const { taxAmount, taxBase } = calculateTax(totalPrice, taxType)
 
       // Criar item da fatura
       await tx.invoiceItem.create({
@@ -107,6 +132,9 @@ export async function createPurchaseInvoice(data: InvoiceFormData) {
           quantity,
           unitPrice,
           totalPrice,
+          taxType,
+          taxBase,
+          taxAmount,
           cost,
         },
       })
@@ -132,13 +160,24 @@ export async function createPurchaseInvoice(data: InvoiceFormData) {
       })
 
       totalAmount = totalAmount.add(totalPrice)
+      if (taxType === 'IVA_10') totalIva10 = totalIva10.add(taxAmount)
+      else if (taxType === 'IVA_5') totalIva5 = totalIva5.add(taxAmount)
+      else totalExento = totalExento.add(totalPrice)
     }
 
     // 3. Atualizar total da fatura
     await tx.commercialInvoice.update({
       where: { id: invoice.id },
-      data: { totalAmount },
+      data: { 
+        totalAmount,
+        totalIva10,
+        totalIva5,
+        totalExento
+      },
     })
+
+    // 4. Automatizar lançamento contábil
+    await postInvoiceToLedger(invoice.id, tx)
 
     return invoice
   })
@@ -184,12 +223,15 @@ export async function createSalesInvoice(data: InvoiceFormData) {
     })
 
     let totalAmount = new Prisma.Decimal(0)
+    let totalIva10 = new Prisma.Decimal(0)
+    let totalIva5 = new Prisma.Decimal(0)
+    let totalExento = new Prisma.Decimal(0)
 
     // 3. Criar itens e movimentações de estoque (SAIDA)
     for (const item of data.items) {
       const product = await tx.product.findFirst({
         where: { id: item.productId, tenantId },
-        select: { id: true, currentStock: true, namePt: true, cost: true },
+        select: { id: true, currentStock: true, namePt: true, cost: true, taxType: true },
       })
       if (!product) throw new Error(`Produto ${item.productId} não encontrado`)
 
@@ -197,6 +239,9 @@ export async function createSalesInvoice(data: InvoiceFormData) {
       const unitPrice = new Prisma.Decimal(item.unitPrice)
       const totalPrice = unitPrice.mul(quantity)
       const cost = product.cost ?? new Prisma.Decimal(item.cost ?? 0)
+      const taxType = item.taxType ?? product.taxType
+
+      const { taxAmount, taxBase } = calculateTax(totalPrice, taxType)
 
       // Criar item da fatura
       await tx.invoiceItem.create({
@@ -206,6 +251,9 @@ export async function createSalesInvoice(data: InvoiceFormData) {
           quantity,
           unitPrice,
           totalPrice,
+          taxType,
+          taxBase,
+          taxAmount,
           cost,
         },
       })
@@ -231,16 +279,35 @@ export async function createSalesInvoice(data: InvoiceFormData) {
       })
 
       totalAmount = totalAmount.add(totalPrice)
+      if (taxType === 'IVA_10') totalIva10 = totalIva10.add(taxAmount)
+      else if (taxType === 'IVA_5') totalIva5 = totalIva5.add(taxAmount)
+      else totalExento = totalExento.add(totalPrice)
     }
 
     // 4. Atualizar total da fatura
     await tx.commercialInvoice.update({
       where: { id: invoice.id },
-      data: { totalAmount },
+      data: { 
+        totalAmount,
+        totalIva10,
+        totalIva5,
+        totalExento
+      },
     })
+
+    // 5. Automatizar lançamento contábil
+    await postInvoiceToLedger(invoice.id, tx)
 
     return invoice
   })
+
+  // 6. Integração SIFEN (Real-time, non-blocking)
+  // Executado fora da transação para não travar o banco em caso de timeout do Sifen
+  try {
+    submitInvoiceToSifen(tenantId, result.id)
+  } catch (err) {
+    console.error('[SIFEN] Background submission trigger failed:', err)
+  }
 
   revalidatePath('/dashboard/invoices')
   revalidatePath('/dashboard/inventory')

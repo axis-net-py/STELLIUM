@@ -1,21 +1,14 @@
 "use server";
 
 import { auth } from "@/auth";
-import { prismaWithTenant } from "@axis/core/prisma/client";
-import { checkPermission } from "@axis/core/lib/auth/guard";
+import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
 // ─── Types ──────────────────────────────────────
 
 export type PrintType = "thermal" | "laser";
 
-interface DocumentInfo {
-  id: string;
-  type: string;
-  tenantId: string;
-}
-
-// ─── Get Document URL for Laser Printing ─────────────────
+// ─── Get Document URL for Printing ─────────────────────────
 
 export async function getDocumentUrl(
   type: PrintType,
@@ -29,30 +22,10 @@ export async function getDocumentUrl(
 
     const tenantId = session.user.tenantId;
 
-    // Check permission based on document type
-    const permission =
-      type === "laser" ? "accounting:read" : "settings:read";
-    const hasPermission = await checkPermission(
-      session.user.id,
-      permission,
-      tenantId
-    );
-
-    if (!hasPermission) {
-      return { url: "", error: "Forbidden" };
-    }
-
-    // Return the API URL for PDF generation
     if (type === "laser") {
-      return {
-        url: `/api/v1/invoices/${documentId}/generate`,
-      };
+      return { url: `/api/v1/invoices/${documentId}/generate` };
     }
-
-    // For thermal, return a client-side render URL
-    return {
-      url: `/thermal/${documentId}`,
-    };
+    return { url: `/thermal/${documentId}` };
   } catch (error: any) {
     return {
       url: "",
@@ -74,23 +47,18 @@ export async function validateDocumentAccess(
     }
 
     const tenantId = session.user.tenantId;
-    const prisma = prismaWithTenant(tenantId);
 
-    // Check if document belongs to tenant
     if (documentType === "invoice") {
       const doc = await prisma.commercialInvoice.findUnique({
         where: { id: documentId },
         select: { tenantId: true },
       });
-
       if (!doc || doc.tenantId !== tenantId) {
         return { valid: false, error: "Document not found" };
       }
-
       return { valid: true, tenantId };
     }
 
-    // Add other document types as needed
     return { valid: false, error: "Unsupported document type" };
   } catch (error: any) {
     return {
@@ -111,11 +79,19 @@ export async function logPrintAction(
     const session = await auth();
     if (!session?.user?.id) return;
 
-    const { logAudit } = await import("@axis/core/lib/auth/guard");
-    await logAudit(session.user.id, tenantId, "PRINT_DOCUMENT", {
-      documentId,
-      printType,
-      timestamp: new Date().toISOString(),
+    await prisma.auditLog.create({
+      data: {
+        tenantId,
+        userId: session.user.id,
+        action: "PRINT_DOCUMENT",
+        entity: printType,
+        entityId: documentId,
+        details: {
+          documentId,
+          printType,
+          timestamp: new Date().toISOString(),
+        },
+      },
     });
 
     revalidatePath(`/${tenantId}/settings/team`);

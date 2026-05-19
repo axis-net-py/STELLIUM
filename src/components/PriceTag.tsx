@@ -1,8 +1,10 @@
 "use client";
 
-import { useLocale, useTranslations } from "next-intl";
-import { GeistMono } from "geist/font/mono";
-import type { CurrencyCode } from "@axis/currency";
+import { Geist_Mono } from "next/font/google";
+
+const GeistMono = Geist_Mono({ subsets: ["latin"] });
+
+type CurrencyCode = "PYG" | "USD" | "BRL";
 
 interface PriceTagProps {
   amount: number | string;
@@ -16,13 +18,6 @@ interface PriceTagProps {
   size?: "sm" | "md" | "lg";
 }
 
-/**
- * PriceTag - Universal price display component
- *
- * Displays price in PYG (anchor) with USD/BRL conversions in subtext.
- * Uses Geist Mono for tabular alignment.
- * Shows real-time margin view for sellers.
- */
 export function PriceTag({
   amount,
   currency,
@@ -31,16 +26,8 @@ export function PriceTag({
   className = "",
   size = "md",
 }: PriceTagProps) {
-  const t = useTranslations("priceTag");
-  const locale = useLocale();
+  const sizeClasses = { sm: "text-sm", md: "text-base", lg: "text-lg" };
 
-  const sizeClasses = {
-    sm: "text-sm",
-    md: "text-base",
-    lg: "text-lg",
-  };
-
-  // Convert to PYG if needed (simplified - in production use CurrencyEngine)
   const getPYGValue = (): number => {
     const val = typeof amount === "string" ? parseFloat(amount) : amount;
     if (currency === "PYG") return val;
@@ -62,15 +49,13 @@ export function PriceTag({
     return pygValue / rate;
   };
 
-  const formatCurrency = (value: number, curr: string): string => {
+  const fmt = (value: number, curr: string): string => {
     const symbols: Record<string, string> = { PYG: "Gs", USD: "$", BRL: "R$" };
     const decimals: Record<string, number> = { PYG: 0, USD: 2, BRL: 2 };
-
-    const formatted = value.toLocaleString(locale === "es-PY" ? "es-PY" : "pt-BR", {
+    const formatted = value.toLocaleString("es-PY", {
       minimumFractionDigits: decimals[curr],
       maximumFractionDigits: decimals[curr],
     });
-
     return `${symbols[curr]} ${formatted}`;
   };
 
@@ -80,29 +65,18 @@ export function PriceTag({
 
   return (
     <div className={`price-tag ${className}`}>
-      {/* Main price in PYG */}
       <div className={`price-pyg ${sizeClasses[size]} ${GeistMono.className} font-semibold tabular-nums`}>
-        {formatCurrency(pygValue, "PYG")}
+        {fmt(pygValue, "PYG")}
       </div>
-
-      {/* Conversions in USD and BRL */}
       {showConversions && exchangeRate && (
         <div className="mt-1 flex gap-3 text-sm text-muted-foreground">
-          <span className="price-usd tabular-nums">
-            {formatCurrency(usdValue, "USD")}
-          </span>
+          <span className="price-usd tabular-nums">{fmt(usdValue, "USD")}</span>
           <span className="text-border">|</span>
-          <span className="price-brl tabular-nums">
-            {formatCurrency(brlValue, "BRL")}
-          </span>
+          <span className="price-brl tabular-nums">{fmt(brlValue, "BRL")}</span>
         </div>
       )}
-
-      {/* Margin hint */}
       {showConversions && (
-        <div className="mt-0.5 text-xs text-muted-foreground/60">
-          {t("equivalent")}
-        </div>
+        <div className="mt-0.5 text-xs text-muted-foreground/60">equivalente</div>
       )}
     </div>
   );

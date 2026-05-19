@@ -1,50 +1,40 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Area,
-  AreaChart,
 } from 'recharts';
 import { useQuery } from '@tanstack/react-query';
-import { getTrendData } from '@axis/dashboard';
-import { formatCurrencyCompact } from '@axis/currency';
+import { getTrendData } from '@/lib/dashboard';
+import { formatCurrency, formatCurrencyCompact } from '@/lib/format';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { TrendDataPoint } from '@axis/dashboard';
 
 interface SalesChartProps {
   dateRange: { from: Date; to: Date };
   currency: 'PYG' | 'USD' | 'BRL';
 }
 
-// Custom minimalist tooltip
 function CustomTooltip({ active, payload, label, currency }: any) {
-  const t = useTranslations('dashboard');
-
   if (!active || !payload?.length) return null;
-
   return (
     <div className="bg-card border border-border p-3 shadow-sm text-xs">
       <p className="text-muted-foreground mb-1">{label}</p>
       <p className="font-mono font-bold text-foreground">
-        {formatCurrencyCompact(payload[0].value, currency)}
+        {formatCurrency(payload[0].value, currency)}
       </p>
     </div>
   );
 }
 
 export function SalesChart({ dateRange, currency }: SalesChartProps) {
-  const t = useTranslations('dashboard');
-
   const { data, isLoading, error } = useQuery({
     queryKey: ['trendData', dateRange, currency],
-    queryFn: () => getTrendData(dateRange),
+    queryFn: () => getTrendData({ start: dateRange.from, end: dateRange.to }),
   });
 
   if (isLoading) {
@@ -58,7 +48,7 @@ export function SalesChart({ dateRange, currency }: SalesChartProps) {
   if (error) {
     return (
       <div className="bg-card border shadow-sm p-6 text-destructive text-sm">
-        {t('errorLoadingChart')}
+        Erro ao carregar grafico
       </div>
     );
   }
@@ -69,7 +59,7 @@ export function SalesChart({ dateRange, currency }: SalesChartProps) {
     <div className="bg-card border shadow-sm p-6">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-sm font-medium uppercase tracking-widest text-muted-foreground">
-          {t('salesChart')}
+          Vendas — 30 dias
         </h3>
         <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
           {currency}
@@ -85,11 +75,7 @@ export function SalesChart({ dateRange, currency }: SalesChartProps) {
             </linearGradient>
           </defs>
 
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="hsl(var(--border))"
-            vertical={false}
-          />
+          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
 
           <XAxis
             dataKey="date"
@@ -105,7 +91,7 @@ export function SalesChart({ dateRange, currency }: SalesChartProps) {
             tickLine={false}
             axisLine={false}
             tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-            tickFormatter={(value) => formatCurrencyCompact(value, currency)}
+            tickFormatter={(v) => formatCurrencyCompact(v, currency)}
             width={80}
           />
 

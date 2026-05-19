@@ -21,12 +21,7 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@axis/core/*": ["../packages/core/*"],
-      "@axis/core": ["../packages/core"],
-      "@axis/accounting": ["../packages/accounting/src"],
-      "@axis/currency": ["../packages/currency/src"],
-      "@axis/dashboard": ["../packages/dashboard/src"],
-      "@axis/reports": ["../packages/reports/src"],
+      "@axis/currency": ["./packages/currency/lib"],
       "@axis/sifen": ["./packages/sifen/lib"]
     }
   },

@@ -40,14 +40,15 @@ export default async function InvoicesPage({
               <TableHead>Cliente</TableHead>
               <TableHead>Data</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Status SET</TableHead>
               <TableHead>Total</TableHead>
-              <TableHead className="text-right">PDF</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {invoices.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                   Nenhuma fatura criada. Clique em "Nova Fatura" para começar.
                 </TableCell>
               </TableRow>
@@ -55,8 +56,8 @@ export default async function InvoicesPage({
               invoices.map((inv: any) => (
                 <TableRow key={inv.id}>
                   <TableCell>
-                    <Badge variant={inv.direction === "PURCHASE" ? "default" : "secondary"}>
-                      {inv.direction === "PURCHASE" ? "Compra" : "Venda"}
+                    <Badge variant={inv.type === "PURCHASE" ? "default" : "secondary"}>
+                      {inv.type === "PURCHASE" ? "Compra" : "Venda"}
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium">
@@ -84,13 +85,28 @@ export default async function InvoicesPage({
                         : "Pendente"}
                     </Badge>
                   </TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={
+                        inv.sifenStatus === "APPROVED"
+                          ? "default"
+                          : inv.sifenStatus === "REJECTED"
+                          ? "destructive"
+                          : "outline"
+                      }
+                    >
+                      {inv.sifenStatus || "Não enviado"}
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-right font-mono">
                     {new Intl.NumberFormat("pt-BR", {
                       style: "currency",
-                      currency: "BRL",
+                      currency: "PYG",
+                      minimumFractionDigits: 0,
+                      maximumFractionDigits: 0,
                     }).format(Number(inv.totalAmount))}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right space-x-2">
                     <a
                       href={`/api/invoices/${inv.id}/pdf`}
                       target="_blank"

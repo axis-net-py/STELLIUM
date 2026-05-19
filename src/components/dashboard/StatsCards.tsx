@@ -1,10 +1,9 @@
 'use client';
 
-import { useTranslations } from 'next-intl';
 import { Geist_Mono } from 'next/font/google';
 import { useQuery } from '@tanstack/react-query';
-import { getDashboardStats } from '@axis/dashboard';
-import { formatCurrency } from '@axis/currency';
+import { getDashboardStats } from '@/lib/dashboard';
+import { formatCurrency } from '@/lib/format';
 import {
   Card,
   CardContent,
@@ -21,11 +20,9 @@ interface StatsCardsProps {
 }
 
 export function StatsCards({ dateRange, currency }: StatsCardsProps) {
-  const t = useTranslations('dashboard');
-
   const { data, isLoading, error } = useQuery({
     queryKey: ['dashboardStats', dateRange, currency],
-    queryFn: () => getDashboardStats(dateRange),
+    queryFn: () => getDashboardStats({ start: dateRange.from, end: dateRange.to }),
   });
 
   if (isLoading) {
@@ -38,89 +35,71 @@ export function StatsCards({ dateRange, currency }: StatsCardsProps) {
     );
   }
 
-  if (error) {
+  if (error || !data) {
     return (
-      <div className="text-destructive text-sm">
-        {t('errorLoadingStats')}
-      </div>
+      <div className="text-destructive text-sm">Erro ao carregar estatisticas</div>
     );
   }
 
-  const stats = data!;
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {/* Sales Card */}
       <Card className="border-l-4 border-l-[hsl(var(--primary))] shadow-sm bg-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            {t('sales')}
+            Vendas
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-baseline gap-2">
-            <h3
-              className={`${geistMono.className} text-2xl font-bold text-[hsl(var(--foreground))]`}
-            >
-              {formatCurrency(stats.sales.total, currency)}
+            <h3 className={`${geistMono.className} text-2xl font-bold text-foreground`}>
+              {formatCurrency(Number(data.salesTotal), currency)}
             </h3>
-            <span className="text-[10px] text-green-600">+{stats.sales.count} trans</span>
+            <span className="text-[10px] text-green-600">+{data.salesCount} trans</span>
           </div>
         </CardContent>
       </Card>
 
-      {/* Purchases Card */}
       <Card className="border-l-4 border-l-[hsl(var(--primary))] shadow-sm bg-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            {t('purchases')}
+            Compras
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-baseline gap-2">
-            <h3
-              className={`${geistMono.className} text-2xl font-bold text-[hsl(var(--foreground))]`}
-            >
-              {formatCurrency(stats.purchases.total, currency)}
+            <h3 className={`${geistMono.className} text-2xl font-bold text-foreground`}>
+              {formatCurrency(Number(data.purchasesTotal), currency)}
             </h3>
           </div>
         </CardContent>
       </Card>
 
-      {/* Low Stock Alerts */}
       <Card className="border-l-4 border-l-[hsl(var(--accent))] shadow-sm bg-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            {t('lowStockAlerts')}
+            Estoque Baixo
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-baseline gap-2">
-            <h3
-              className={`${geistMono.className} text-2xl font-bold text-[hsl(var(--foreground))]`}
-            >
-              {stats.lowStockAlerts}
+            <h3 className={`${geistMono.className} text-2xl font-bold text-foreground`}>
+              {data.lowStockAlerts}
             </h3>
-            <span className="text-[10px] text-amber-600">
-              {t('products')}
-            </span>
+            <span className="text-[10px] text-amber-600">produtos</span>
           </div>
         </CardContent>
       </Card>
 
-      {/* Liquidity */}
       <Card className="border-l-4 border-l-[hsl(var(--primary))] shadow-sm bg-card">
         <CardHeader className="pb-2">
           <CardTitle className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-            {t('liquidity')}
+            Liquidez
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex items-baseline gap-2">
-            <h3
-              className={`${geistMono.className} text-2xl font-bold text-[hsl(var(--foreground))]`}
-            >
-              {formatCurrency(stats.liquidity, currency)}
+            <h3 className={`${geistMono.className} text-2xl font-bold text-foreground`}>
+              {formatCurrency(Number(data.liquidity), currency)}
             </h3>
           </div>
         </CardContent>

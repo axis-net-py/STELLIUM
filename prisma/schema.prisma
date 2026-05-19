@@ -7,6 +7,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ─── Enums ──────────────────────────────────────────────────
+
 enum Role {
   SOVEREIGN
   ADMIN
@@ -14,99 +16,363 @@ enum Role {
   AUDITOR
 }
 
-model Tenant {
-  id        String   @id @default(cuid())
-  name      String
-  businessName String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  users       User[]
-  invoices    Invoice[]
-  journalEntries JournalEntry[]
+enum Currency {
+  PYG
+  USD
+  BRL
 }
+
+enum TransactionType {
+  RECEIVABLE
+  PAYABLE
+  TRANSFER
+}
+
+enum InvoiceType {
+  PURCHASE
+  SALES
+}
+
+enum InvoiceStatus {
+  DRAFT
+  APPROVED
+  CANCELLED
+  PENDING
+}
+
+enum MovementType {
+  ENTRADA
+  SAIDA
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+enum TaxType {
+  IVA_10
+  IVA_5
+  EXENTO
+}
+
+// ─── Tenant ─────────────────────────────────────────────────
+
+model Tenant {
+  id                String   @id @default(cuid())
+  name              String
+  businessName      String?
+  ruc               String?
+  tradeName         String?
+  establishment     String?  @default("001")
+  emissionPoint     String?  @default("001")
+  address           String?
+  economicActivity  String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  users             User[]
+  customers         Customer[]
+  suppliers         Supplier[]
+  products          Product[]
+  invoices          CommercialInvoice[]
+  exchangeRates     ExchangeRate[]
+  accounts          Account[]
+  transactions      Transaction[]
+  permissions       Permission[]
+  journalEntries    JournalEntry[]
+  auditLogs         AuditLog[]
+}
+
+// ─── User ───────────────────────────────────────────────────
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String
-  password  String
-  role      Role     @default(OPERATOR)
-  tenantId  String
-  tenant    Tenant   @relation(fields: [tenantId], references: [id])
-  createdAt DateTime @default(now())
+  id            String   @id @default(cuid())
+  email         String   @unique
+  name          String
+  password      String
+  role          Role     @default(OPERATOR)
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  emailVerified DateTime?
+  createdAt     DateTime @default(now())
 
   @@index([tenantId])
 }
 
-model Invoice {
-  id              String   @id @default(cuid())
-  number          String?
-  documentNumber  String?
-  sifenCdc        String?
-  sifenXmlUrl     String?
-  issuedAt        DateTime
-  type            String   // SALE, PURCHASE
-  status          String   // APPROVED, PENDING, DRAFT
-  totalAmount      Decimal  @db.Decimal(12,2)
-  totalUSD        Decimal? @db.Decimal(12,2)
-  exchangeRate    Decimal? @db.Decimal(12,4)
-  tenantId        String
-  tenant          Tenant   @relation(fields: [tenantId], references: [id])
-  customerId      String?
-  items           InvoiceItem[]
-  createdAt        DateTime @default(now())
+// ─── Customer ───────────────────────────────────────────────
+
+model Customer {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  name         String
+  document     String?
+  documentType String?  // RUC, CI, CPF, CNPJ
+  email        String?
+  phone        String?
+  address      String?
+  city         String?
+  country      String?  @default("PY")
+  category     String?  @default("retail") // retail, wholesale, vip
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  invoices     CommercialInvoice[]
 
   @@index([tenantId])
 }
+
+// ─── Supplier ───────────────────────────────────────────────
+
+model Supplier {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  name          String
+  businessName  String?
+  document      String?
+  documentType  String?  // RUC, CI, CPF, CNPJ
+  email         String?
+  phone         String?
+  address       String?
+  city          String?
+  country       String?  @default("PY")
+  category      String?  @default("retail")
+  isActive      Boolean  @default(true)
+  paymentTerms  String?  // e.g. "30 days", "Net 60"
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  purchaseInvoices CommercialInvoice[]
+
+  @@index([tenantId])
+}
+
+// ─── Product ────────────────────────────────────────────────
+
+model Product {
+  id           String   @id @default(cuid())
+  tenantId     String
+  tenant       Tenant   @relation(fields: [tenantId], references: [id])
+  sku          String
+  namePt       String
+  nameEs       String
+  price        Decimal  @db.Decimal(12, 2)
+  cost         Decimal  @db.Decimal(12, 2) @default(0)
+  unit         String   @default("un")
+  taxType      TaxType  @default(IVA_10)
+  currentStock Decimal  @db.Decimal(10, 2) @default(0)
+  minStock     Decimal  @db.Decimal(10, 2) @default(0)
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  movements    InventoryMovement[]
+  invoiceItems InvoiceItem[]
+
+  @@unique([tenantId, sku])
+  @@index([tenantId])
+}
+
+// ─── Commercial Invoice ─────────────────────────────────────
+
+model CommercialInvoice {
+  id             String       @id @default(cuid())
+  tenantId       String
+  tenant         Tenant       @relation(fields: [tenantId], references: [id])
+  type           InvoiceType
+  status         InvoiceStatus @default(APPROVED)
+  documentNumber String?
+  sifenCdc       String?
+  sifenXmlUrl    String?
+  sifenStatus    String?
+  customerId     String?
+  customer       Customer?    @relation(fields: [customerId], references: [id])
+  supplierId     String?
+  supplier       Supplier?    @relation(fields: [supplierId], references: [id])
+  issuedAt       DateTime     @default(now())
+  dueDate        DateTime?
+  currency       Currency     @default(PYG)
+  exchangeRate   Decimal      @db.Decimal(12, 4) @default(1)
+  totalAmount    Decimal      @db.Decimal(12, 2) @default(0)
+  totalUSD       Decimal?     @db.Decimal(12, 2)
+  totalIva10     Decimal      @db.Decimal(12, 2) @default(0)
+  totalIva5      Decimal      @db.Decimal(12, 2) @default(0)
+  totalExento    Decimal      @db.Decimal(12, 2) @default(0)
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  items          InvoiceItem[]
+  movements      InventoryMovement[]
+
+  @@index([tenantId])
+  @@index([customerId])
+  @@index([supplierId])
+}
+
+// ─── Invoice Item ───────────────────────────────────────────
 
 model InvoiceItem {
-  id          String   @id @default(cuid())
-  invoiceId  String
-  invoice    Invoice  @relation(fields: [invoiceId], references: [id])
-  sku         String
-  quantity    Decimal  @db.Decimal(10,2)
-  unitPrice   Decimal  @db.Decimal(12,2)
-  totalPrice  Decimal  @db.Decimal(12,2)
+  id                  String            @id @default(cuid())
+  commercialInvoiceId String
+  commercialInvoice   CommercialInvoice @relation(fields: [commercialInvoiceId], references: [id])
+  productId           String
+  product             Product           @relation(fields: [productId], references: [id])
+  sku                 String?
+  quantity            Decimal           @db.Decimal(10, 2)
+  unitPrice           Decimal           @db.Decimal(12, 2)
+  totalPrice          Decimal           @db.Decimal(12, 2)
+  taxType             TaxType           @default(IVA_10)
+  taxBase             Decimal           @db.Decimal(12, 2) @default(0)
+  taxAmount           Decimal           @db.Decimal(12, 2) @default(0)
+  cost                Decimal?          @db.Decimal(12, 2)
 
-  @@index([invoiceId])
+  @@index([commercialInvoiceId])
+  @@index([productId])
 }
 
-model JournalEntry {
+// ─── Inventory Movement ─────────────────────────────────────
+
+model InventoryMovement {
+  id                  String            @id @default(cuid())
+  tenantId            String
+  productId           String
+  product             Product           @relation(fields: [productId], references: [id])
+  type                MovementType
+  quantity            Decimal           @db.Decimal(10, 2)
+  unitCost            Decimal?          @db.Decimal(12, 2)
+  totalCost           Decimal?          @db.Decimal(12, 2)
+  reason              String?
+  commercialInvoiceId String?
+  commercialInvoice   CommercialInvoice? @relation(fields: [commercialInvoiceId], references: [id])
+  createdAt           DateTime          @default(now())
+
+  @@index([tenantId])
+  @@index([productId])
+}
+
+// ─── Exchange Rate ──────────────────────────────────────────
+
+model ExchangeRate {
   id          String   @id @default(cuid())
-  number      String
-  date        DateTime
-  description String
-  status      String   // POSTED, DRAFT, VOIDED
-  referenceType String?
   tenantId    String
   tenant      Tenant   @relation(fields: [tenantId], references: [id])
-  lines        JournalLine[]
-  createdAt    DateTime @default(now())
+  ratePYGtoUSD Decimal @db.Decimal(12, 4)
+  ratePYGtoBRL Decimal @db.Decimal(12, 4)
+  date        DateTime @default(now())
+  source      String   @default("manual")
+  isManual    Boolean  @default(false)
+
+  @@index([tenantId])
+  @@index([date])
+}
+
+// ─── Account (Chart of Accounts) ────────────────────────────
+
+model Account {
+  id       String      @id @default(cuid())
+  tenantId String
+  tenant   Tenant      @relation(fields: [tenantId], references: [id])
+  code     String
+  namePt   String
+  nameEs   String
+  type     AccountType
+  isActive Boolean     @default(true)
+
+  journalLines JournalLine[]
+
+  @@unique([tenantId, code])
+  @@index([tenantId])
+}
+
+// ─── Transaction ────────────────────────────────────────────
+
+model Transaction {
+  id           String          @id @default(cuid())
+  tenantId     String
+  tenant       Tenant          @relation(fields: [tenantId], references: [id])
+  type         TransactionType
+  entityId     String
+  currency     Currency        @default(PYG)
+  amount       Decimal         @db.Decimal(12, 2)
+  exchangeRate Decimal         @db.Decimal(12, 4) @default(1)
+  totalPyg     Decimal         @db.Decimal(12, 2)
+  category     String?
+  createdAt    DateTime        @default(now())
 
   @@index([tenantId])
 }
 
+// ─── Permission ─────────────────────────────────────────────
+
+model Permission {
+  id       String @id @default(cuid())
+  tenantId String
+  tenant   Tenant @relation(fields: [tenantId], references: [id])
+  action   String
+  role     Role
+
+  @@unique([action, role, tenantId])
+  @@index([tenantId])
+}
+
+// ─── Journal Entry ──────────────────────────────────────────
+
+model JournalEntry {
+  id            String   @id @default(cuid())
+  tenantId      String
+  tenant        Tenant   @relation(fields: [tenantId], references: [id])
+  number        String
+  date          DateTime
+  description   String
+  status        String   @default("DRAFT") // POSTED, DRAFT, VOIDED
+  referenceType String?
+  referenceId   String?
+  postedAt      DateTime?
+  createdBy     String?
+  createdAt     DateTime @default(now())
+
+  lines         JournalLine[]
+
+  @@index([tenantId])
+}
+
+// ─── Journal Line ───────────────────────────────────────────
+
 model JournalLine {
-  id              String   @id @default(cuid())
-  journalEntryId String
+  id              String       @id @default(cuid())
+  journalEntryId  String
   journalEntry    JournalEntry @relation(fields: [journalEntryId], references: [id])
-  type            String   // DEBIT, CREDIT
-  amount          Decimal  @db.Decimal(12,2)
-  account         String
-  createdAt        DateTime @default(now())
+  accountId       String
+  account         Account      @relation(fields: [accountId], references: [id])
+  type            String       // DEBIT, CREDIT
+  amount          Decimal      @db.Decimal(12, 2)
+  currency        String       @default("PYG")
+  exchangeRate    Decimal      @db.Decimal(12, 4) @default(1)
+  amountUSD       Decimal?     @db.Decimal(12, 2)
+  createdAt       DateTime     @default(now())
 
   @@index([journalEntryId])
+  @@index([accountId])
 }
+
+// ─── Audit Log ──────────────────────────────────────────────
 
 model AuditLog {
   id        String   @id @default(cuid())
   tenantId  String
+  tenant    Tenant   @relation(fields: [tenantId], references: [id])
   userId    String?
   action    String
-  entity    String
+  entity    String?
   entityId  String?
-  details   String?
+  details   Json?
   createdAt DateTime @default(now())
 
   @@index([tenantId])

@@ -29,7 +29,8 @@ export function CommercialInvoiceSheet({
     productId: string;
     quantity: number;
     unitPrice: number;
-  }[]>([{ productId: "", quantity: 1, unitPrice: 0 }]);
+    taxType: "IVA_10" | "IVA_5" | "EXENTO";
+  }[]>([{ productId: "", quantity: 1, unitPrice: 0, taxType: "IVA_10" }]);
   const router = useRouter();
 
   async function openSheet() {
@@ -40,7 +41,7 @@ export function CommercialInvoiceSheet({
   }
 
   function addItem() {
-    setItems([...items, { productId: "", quantity: 1, unitPrice: 0 }]);
+    setItems([...items, { productId: "", quantity: 1, unitPrice: 0, taxType: "IVA_10" }]);
   }
 
   function updateItem(index: number, field: string, value: any) {
@@ -48,7 +49,10 @@ export function CommercialInvoiceSheet({
     (newItems[index] as any)[field] = value;
     if (field === "productId") {
       const prod = products.find((p) => p.id === value);
-      if (prod) newItems[index].unitPrice = Number(prod.price);
+      if (prod) {
+        newItems[index].unitPrice = Number(prod.price);
+        newItems[index].taxType = (prod as any).taxType || "IVA_10";
+      }
     }
     setItems(newItems);
   }
@@ -70,6 +74,7 @@ export function CommercialInvoiceSheet({
           productId: i.productId,
           quantity: i.quantity,
           unitPrice: i.unitPrice,
+          taxType: i.taxType,
         })),
       };
 
@@ -160,7 +165,7 @@ export function CommercialInvoiceSheet({
               Itens
             </Label>
             {items.map((item, index) => (
-              <div key={index} className="grid grid-cols-[1fr_80px_120px_40px] gap-2 items-end">
+              <div key={index} className="grid grid-cols-[1fr_80px_120px_100px_40px] gap-2 items-end">
                 <Select
                   value={item.productId}
                   onValueChange={(v) => updateItem(index, "productId", v)}
@@ -199,10 +204,24 @@ export function CommercialInvoiceSheet({
                   placeholder="Preço"
                   className="bg-background border-border text-[13px] h-[40px] rounded-[8px]"
                 />
+                <Select
+                  value={item.taxType}
+                  onValueChange={(v) => updateItem(index, "taxType", v)}
+                  required
+                >
+                  <SelectTrigger className="bg-background border-border text-[13px] h-[40px] rounded-[8px]">
+                    <SelectValue placeholder="IVA" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="IVA_10">10%</SelectItem>
+                    <SelectItem value="IVA_5">5%</SelectItem>
+                    <SelectItem value="EXENTO">Exento</SelectItem>
+                  </SelectContent>
+                </Select>
                 <button
                   type="button"
                   onClick={() => removeItem(index)}
-                  className="text-red-500 hover:text-red-700 text-xs"
+                  className="text-red-500 hover:text-red-700 text-xs mb-3"
                 >
                   X
                 </button>

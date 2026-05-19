@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { pdf } from '@react-pdf/renderer';
 import { SifenInvoicePDF } from '@/components/pdf/SifenInvoicePDF';
-import { prismaWithTenant } from '@axis/core/prisma/client';
+import prisma from '@/lib/prisma';
 import { auth } from '@/auth';
 
 // ─── API: Generate SIFEN Invoice PDF ─────────────────
@@ -17,11 +17,24 @@ export async function GET(
 
     const { id } = await params;
     const tenantId = session.user.tenantId;
-    const prisma = prismaWithTenant(tenantId);
 
-    // Fetch invoice with all related data
+    // Inline permission check
+    const user = await prisma.user.findFirst({ where: { id: session.user.id, tenantId } });
+    if (!user) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+    if (user.role !== 'SOVEREIGN' && user.role !== 'ADMIN') {
+      const hasPermission = await prisma.permission.findFirst({
+        where: { tenantId, role: user.role, action: 'accounting:read', allowed: true },
+      });
+      if (!hasPermission) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
+
+    // Fetch invoice with all related data (scoped to tenant)
     const invoice = await prisma.commercialInvoice.findUnique({
-      where: { id },
+      where: { id, tenantId },
       include: {
         customer: true,
         items: {
@@ -32,18 +45,6 @@ export async function GET(
 
     if (!invoice) {
       return NextResponse.json({ error: 'Invoice not found' }, { status: 404 });
-    }
-
-    // Check permission
-    const { checkPermission } = await import('@axis/core/lib/auth/guard');
-    const hasPermission = await checkPermission(
-      session.user.id,
-      'accounting:read',
-      tenantId
-    );
-
-    if (!hasPermission) {
-      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     // Prepare data for PDF
@@ -72,9 +73,7 @@ export async function GET(
       })),
       totalAmount: Number(invoice.totalAmount),
       totalUSD: invoice.totalUSD ? Number(invoice.totalUSD) : undefined,
-      exchangeRate: invoice.exchangeRate
-        ? Number(invoice.exchangeRate)
-        : undefined,
+      exchangeRate: invoice.exchangeRate ? Number(invoice.exchangeRate) : undefined,
     };
 
     // Generate PDF
@@ -95,7 +94,6 @@ export async function GET(
     }
     const pdfBuffer = Buffer.concat(chunks);
 
-    // Return PDF
     return new NextResponse(pdfBuffer, {
       status: 200,
       headers: {
