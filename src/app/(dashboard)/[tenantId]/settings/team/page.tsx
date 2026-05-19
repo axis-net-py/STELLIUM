@@ -339,6 +339,7 @@ export default function TeamSettingsPage() {
             </p>
           </div>
         </div>
+        </div>
       </div>
     </div>
   );
