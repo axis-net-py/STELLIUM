@@ -52,8 +52,8 @@ export default async function ProductsPage() {
                     {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'PYG', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(Number(product.price))}
                   </TableCell>
                   <TableCell>
-                    <span className={product.currentStock <= product.minStock ? "text-red-500 font-bold" : ""}>
-                      {product.currentStock} {product.unit}
+                    <span className={Number(product.currentStock) <= Number(product.minStock) ? "text-red-500 font-bold" : ""}>
+                      {Number(product.currentStock)} {product.unit}
                     </span>
                   </TableCell>
                   <TableCell>
