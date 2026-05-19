@@ -67,10 +67,10 @@ export async function submitInvoiceToSifen(
         taxAmount: 0,
         unit: item.product.unit || "un",
       })),
-      customerDocument: invoice.customer.document || "",
-      customerName: invoice.customer.name,
+      customerDocument: invoice.customer?.document || "00000000",
+      customerName: invoice.customer?.name || "Consumidor Final",
       customerType: "JURIDICA",
-      customerDocType: (invoice.customer.documentType as "RUC" | "CEDULA" | "PASAPORTE" | "EXTRANJERO") || "RUC",
+      customerDocType: (invoice.customer?.documentType as "RUC" | "CEDULA" | "PASAPORTE" | "EXTRANJERO") || "RUC",
     };
 
     // Create SIFEN client
