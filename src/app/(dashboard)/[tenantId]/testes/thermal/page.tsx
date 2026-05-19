@@ -37,7 +37,7 @@ export default function ThermalTestPage() {
             <div style={{ fontSize: '5pt' }}>ETIQUETA DE PRODUTO</div>
           </div>
 
-          <div style={{ marginVertical: '6pt', textAlign: 'center' }}>
+          <div style={{ marginTop: '6pt', marginBottom: '6pt', textAlign: 'center' }}>
             <div style={{ fontFamily: 'Helvetica-Bold', fontSize: '9pt' }}>
               Produto Teste - SKU Scanner
             </div>
