@@ -72,7 +72,7 @@ export function Calendar({
     return selected && date.toDateString() === (selected as Date).toDateString();
   };
 
-  const days = [];
+  const days: React.ReactNode[] = [];
   for (let i = 0; i < firstDayOfMonth; i++) {
     days.push(<div key={`empty-${i}`} className="w-8 h-8" />);
   }

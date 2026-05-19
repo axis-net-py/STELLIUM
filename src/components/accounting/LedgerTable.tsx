@@ -158,7 +158,7 @@ export default function LedgerTable({ tenantId }: { tenantId: string }) {
         toast.success('Invoice posted to ledger successfully');
         loadEntries();
       } else {
-        toast.error(result.error || 'Failed to post invoice');
+        toast.error((result as any).error || 'Failed to post invoice');
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to post invoice');
@@ -173,7 +173,7 @@ export default function LedgerTable({ tenantId }: { tenantId: string }) {
         toast.success('Journal entry voided successfully');
         loadEntries();
       } else {
-        toast.error(result.error || 'Failed to void entry');
+        toast.error((result as any).error || 'Failed to void entry');
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to void entry');
@@ -236,7 +236,7 @@ export default function LedgerTable({ tenantId }: { tenantId: string }) {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 rounded-none" align="start">
-                <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+                <Calendar mode="single" selected={startDate} onSelect={setStartDate} />
               </PopoverContent>
             </Popover>
           </div>
@@ -251,7 +251,7 @@ export default function LedgerTable({ tenantId }: { tenantId: string }) {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0 rounded-none" align="start">
-                <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+                <Calendar mode="single" selected={endDate} onSelect={setEndDate} />
               </PopoverContent>
             </Popover>
           </div>

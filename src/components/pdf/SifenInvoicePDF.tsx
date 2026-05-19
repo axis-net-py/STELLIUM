@@ -14,7 +14,7 @@ import QRCode from 'qrcode';
 Font.register({
   family: 'GeistMono',
   fonts: [
-    { src: '/fonts/GeistMono-Regular.ttf', format: 'truetype' },
+    { src: '/fonts/GeistMono-Regular.ttf' },
   ],
 });
 
@@ -239,7 +239,7 @@ interface SifenInvoiceData {
   sifenCdc?: string | null;
   sifenXmlUrl?: string | null;
   issuedAt: Date | string;
-  type: 'PURCHASE' | 'SALE';
+  type: 'PURCHASE' | 'SALES';
   status: string;
   customer: {
     name: string;

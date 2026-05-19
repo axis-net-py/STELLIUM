@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pdf } from '@react-pdf/renderer';
+import { renderToBuffer } from '@react-pdf/renderer';
 import { SifenInvoicePDF } from '@/components/pdf/SifenInvoicePDF';
 
 // ─── Test Stress: Alinhamento Decimal ──────────────
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
       documentNumber: '001-001-0009999',
       sifenCdc: '0180069560100100100100200201001001001001001001001001001001001001001',
       issuedAt: new Date(),
-      type: 'SALE' as const,
+      type: 'SALES' as const,
       status: 'APPROVED',
       customer: {
         name: 'Teste de Stress - Alinhamento',
@@ -67,14 +67,9 @@ export async function GET(request: NextRequest) {
       />
     );
 
-    const asStream = await pdf(doc).toStream();
-    const chunks: Buffer[] = [];
-    for await (const chunk of asStream) {
-      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-    }
-    const pdfBuffer = Buffer.concat(chunks);
+    const pdfBuffer = await renderToBuffer(doc);
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',

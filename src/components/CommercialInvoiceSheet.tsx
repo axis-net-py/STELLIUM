@@ -177,7 +177,7 @@ export function CommercialInvoiceSheet({
                   <SelectContent>
                     {products.map((p) => (
                       <SelectItem key={p.id} value={p.id} className="text-[12px]">
-                        {p.sku} - {p.namePt} (Est: {p.currentStock})
+                        {p.sku} - {p.namePt} (Est: {p.currentStock.toString()})
                       </SelectItem>
                     ))}
                   </SelectContent>

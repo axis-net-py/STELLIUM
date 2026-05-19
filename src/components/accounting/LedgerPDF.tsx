@@ -1,12 +1,12 @@
 import React from 'react';
 import { Document, Page, Text, View, StyleSheet, Font, Link } from '@react-pdf/renderer';
-import type { JournalEntry } from '@prisma/client';
+import type { JournalEntry, JournalLine } from '@prisma/client';
 
 // ─── Register Geist Mono Font for tabular numeric alignment ───
 Font.register({
   family: 'GeistMono',
   fonts: [
-    { src: '/fonts/GeistMono-Regular.ttf', format: 'truetype' },
+    { src: '/fonts/GeistMono-Regular.ttf' },
   ]
 });
 
@@ -160,8 +160,12 @@ const formatDate = (date: Date | string): string => {
 
 // ─── Component: LedgerPDF ─────────────────────────────────
 
+type JournalEntryWithLines = JournalEntry & {
+  lines: JournalLine[];
+};
+
 interface LedgerPDFProps {
-  entries: JournalEntry[];
+  entries: JournalEntryWithLines[];
   period: string;
   language: 'pt' | 'es';
   tenantName?: string;

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { pdf } from '@react-pdf/renderer';
+import { renderToBuffer } from '@react-pdf/renderer';
 import { SifenInvoicePDF } from '@/components/pdf/SifenInvoicePDF';
 import prisma from '@/lib/prisma';
 import { auth } from '@/auth';
@@ -25,7 +25,7 @@ export async function GET(
     }
     if (user.role !== 'SOVEREIGN' && user.role !== 'ADMIN') {
       const hasPermission = await prisma.permission.findFirst({
-        where: { tenantId, role: user.role, action: 'accounting:read', allowed: true },
+        where: { tenantId, role: user.role, action: 'accounting:read' },
       });
       if (!hasPermission) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -50,16 +50,16 @@ export async function GET(
     // Prepare data for PDF
     const invoiceData = {
       id: invoice.id,
-      number: invoice.documentNumber,
-      documentNumber: invoice.documentNumber,
+      number: invoice.documentNumber || undefined,
+      documentNumber: invoice.documentNumber || undefined,
       sifenCdc: invoice.sifenCdc,
       sifenXmlUrl: invoice.sifenXmlUrl,
       issuedAt: invoice.issuedAt,
       type: invoice.type,
       status: invoice.status,
       customer: {
-        name: invoice.customer.name,
-        document: invoice.customer.document,
+        name: invoice.customer?.name || 'Consumidor Final',
+        document: invoice.customer?.document || '00000000',
       },
       items: invoice.items.map((item) => ({
         product: {
@@ -67,7 +67,7 @@ export async function GET(
           nameEs: item.product.nameEs,
           sku: item.product.sku,
         },
-        quantity: item.quantity,
+        quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
         totalPrice: Number(item.totalPrice),
       })),
@@ -87,14 +87,9 @@ export async function GET(
       />
     );
 
-    const asStream = await pdf(doc).toStream();
-    const chunks: Buffer[] = [];
-    for await (const chunk of asStream) {
-      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-    }
-    const pdfBuffer = Buffer.concat(chunks);
+    const pdfBuffer = await renderToBuffer(doc);
 
-    return new NextResponse(pdfBuffer, {
+    return new NextResponse(new Uint8Array(pdfBuffer), {
       status: 200,
       headers: {
         'Content-Type': 'application/pdf',
